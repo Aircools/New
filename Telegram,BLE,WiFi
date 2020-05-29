@@ -10,7 +10,7 @@ static BLEUUID    charUUID("beb5483e-36e1-4688-b7f5-ea07361b26a8");
 
 char ssid[] = "AIRCOOLS"; 
 char password[] = "filkom16"; 
-#define BOTtoken  "1062494489:AAG45VoMHuiF2yZH50MTvsSyppZdXn8CrL8"
+#define BOTtoken  "******************************************"
 WiFiClientSecure client;
 UniversalTelegramBot bot(BOTtoken, client);
 
