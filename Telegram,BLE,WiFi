@@ -1,0 +1,488 @@
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <UniversalTelegramBot.h>
+#include "BLEDevice.h"
+static BLEUUID serviceUUID1("76d192c2-72fe-11ea-bc55-0242ac130003");
+static BLEUUID serviceUUID2("76d1951a-72fe-11ea-bc55-0242ac130003");
+static BLEUUID serviceUUID3("76d19678-72fe-11ea-bc55-0242ac130003");
+static BLEUUID serviceUUID4("76d19754-72fe-11ea-bc55-0242ac130003");
+static BLEUUID    charUUID("beb5483e-36e1-4688-b7f5-ea07361b26a8");
+
+char ssid[] = "AIRCOOLS"; 
+char password[] = "filkom16"; 
+#define BOTtoken  "1062494489:AAG45VoMHuiF2yZH50MTvsSyppZdXn8CrL8"
+WiFiClientSecure client;
+UniversalTelegramBot bot(BOTtoken, client);
+
+int a,b,c,d;
+std::string value1, value2, value3, value4;
+int r=0;
+int x=4,y,z=0;
+int x1=4,x2=4,x3=4,x4=4;
+int stat1=4,stat2=4,stat3=4,stat4=4;
+int Bot_mtbs = 1000; //mean time between scan messages
+long Bot_lasttime;   //last time messages' scan has been done
+bool Start = false;
+
+void handleNewMessages(int numNewMessages) {
+
+  for (int i=0; i<numNewMessages; i++) {
+    String chat_id = String(bot.messages[i].chat_id);
+    String text = bot.messages[i].text;
+
+    String from_name = bot.messages[i].from_name;
+    if (from_name == "") from_name = "Guest";
+
+     if (text == "/r1on") {
+      x1=1;y=0;
+      bot.sendMessage(chat_id, "Relay 1 is ON", "");
+    }
+
+     if (text == "/r2on") {
+      x2=1;y=0;
+      bot.sendMessage(chat_id, "Relay 2 is ON", "");
+    }
+
+     if (text == "/r3on") {
+      x3=1;y=0;
+      bot.sendMessage(chat_id, "Relay 3 is ON", "");
+    }
+
+     if (text == "/r4on") {
+      x4=1;y=0;
+      bot.sendMessage(chat_id, "Relay 4 is ON", "");
+    }
+
+    
+     if (text == "/r1of") {
+      x1=0;y=0;
+      bot.sendMessage(chat_id, "Relay 1 is OFF", "");
+    }
+
+     if (text == "/r2of") {
+      x2=0;y=0;
+      bot.sendMessage(chat_id, "Relay 2 is OFF", "");
+    }
+
+     if (text == "/r3of") {
+      x3=0;y=0;
+      bot.sendMessage(chat_id, "Relay 3 is OFF", "");
+    }
+
+     if (text == "/r4of") {
+      x4=0;y=0;
+      bot.sendMessage(chat_id, "Relay 4 is OFF", "");
+    }
+
+    if (text == "/allon") {
+      x=1;y=0;
+      bot.sendMessage(chat_id, "All Relay is ON", "");
+    }
+
+    if (text == "/alloff") {
+      x=0;y=0;
+      bot.sendMessage(chat_id, "All Relay is OFF", "");
+    }
+
+    if (text == "/status") {
+      x=2;
+      String all = "Halo  " + from_name + ", Status Relay :\n";
+      
+      if(stat1 == 1){
+        all += "Relay 1 ON.\n";
+      } 
+       if(stat1 == 0){
+        all += "Relay 1 OFF.\n";
+      } 
+
+      if(stat2 == 1){
+        all += "Relay 2 ON.\n";
+      } 
+       if(stat2 == 0){
+        all += "Relay 2 OFF.\n";
+      } 
+
+      if(stat3 == 1){
+        all += "Relay 3 ON.\n";
+      } 
+       if(stat3 == 0){
+        all += "Relay 3 OFF.\n";
+      } 
+
+      if(stat4 == 1){
+        all += "Relay 4 ON.\n";
+      } 
+       if(stat4 == 0){
+        all += "Relay 4 OFF.\n";
+        
+      } 
+      if(stat1 == 1 && stat2 == 1 && stat3 == 1 && stat4 == 1){
+       all += "All Relay is ON";
+      }
+      if(stat1 == 0 && stat2 == 0 && stat3 == 0 && stat4 == 0){
+       all += "All Relay is OFF";
+      }
+      bot.sendMessage(chat_id, all, "Markdown");
+   }
+
+    if (text == "/start") {
+      String welcome = "Welcome to Smart Home System, " + from_name + ".\n";
+      welcome += "/r*on   : turn ON Relay\n";
+      welcome += "/r*off  : turn OFF Relay\n";
+      welcome += "/alloon : turn ON All Relay\n";
+      welcome += "/alloff : turn OFF All Relay\n";
+      welcome += "/status : to see status of Relay\n";
+      welcome += " '*' Change with Relay number \n";
+      bot.sendMessage(chat_id, welcome, "\n");
+    }
+  }
+}
+
+static boolean doConnect = false;
+static boolean connected = false;
+static boolean doScan = false;
+static BLERemoteCharacteristic* pRemoteCharacteristic;
+static BLEAdvertisedDevice* myDevice;
+
+class MyClientCallback : public BLEClientCallbacks {
+  void onConnect(BLEClient* pclient) {
+  }
+
+  void onDisconnect(BLEClient* pclient) {
+    Serial.println("onDisconnect");
+  }
+};
+
+bool telegram(){
+    int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+      handleNewMessages(numNewMessages);
+}  
+bool wificonnect(){
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+bool connectToServer1() {
+    Serial.print("Forming a connection to ");
+    Serial.println(myDevice->getAddress().toString().c_str());
+    
+    BLEClient*  pClient  = BLEDevice::createClient();
+    Serial.println(" - Created client");
+
+    pClient->setClientCallbacks(new MyClientCallback());
+
+    pClient->connect(myDevice);  
+    Serial.println(" - Connected to server");
+
+    BLERemoteService* pRemoteService = pClient->getService(serviceUUID1);
+    if (pRemoteService == nullptr) {
+      Serial.print("Failed to find our service UUID: ");
+      Serial.println(serviceUUID1.toString().c_str());
+      pClient->disconnect();
+      return false;
+    }
+    Serial.println(" - Found our service");
+
+    pRemoteCharacteristic = pRemoteService->getCharacteristic(charUUID);
+    if (pRemoteCharacteristic == nullptr) {
+      Serial.print("Failed to find our characteristic UUID: ");
+      Serial.println(charUUID.toString().c_str());
+      return false;
+    }
+    Serial.println(" - Found our characteristic");
+
+    // Read the value of the characteristic.
+    if(pRemoteCharacteristic->canRead()) {
+      std::string value = pRemoteCharacteristic->readValue();
+      Serial.print("The characteristic value was: ");
+      Serial.println(value.c_str());
+    }
+       
+      value1 = pRemoteCharacteristic->readValue();
+      Serial.print("Received Value: ");
+      Serial.println(value1.c_str());
+      if (value1 == "1"){
+        stat1 = 1;
+      }
+      if (value1 == "0"){
+        stat1 = 0;
+      }
+      
+      if(x==1 || x1==1){
+      pRemoteCharacteristic->writeValue("1");}
+      if(x==0 || x1==0){
+      pRemoteCharacteristic->writeValue("0");}
+      //y=1;
+      pClient->disconnect();
+}
+
+bool connectToServer2() {
+    Serial.print("Forming a connection to ");
+    Serial.println(myDevice->getAddress().toString().c_str());
+    
+    BLEClient*  pClient  = BLEDevice::createClient();
+    Serial.println(" - Created client");
+
+    pClient->setClientCallbacks(new MyClientCallback());
+
+    pClient->connect(myDevice);  
+    Serial.println(" - Connected to server");
+
+    BLERemoteService* pRemoteService = pClient->getService(serviceUUID2);
+    if (pRemoteService == nullptr) {
+      Serial.print("Failed to find our service UUID: ");
+      Serial.println(serviceUUID2.toString().c_str());
+      pClient->disconnect();
+      return false;
+    }
+    Serial.println(" - Found our service");
+
+    pRemoteCharacteristic = pRemoteService->getCharacteristic(charUUID);
+    if (pRemoteCharacteristic == nullptr) {
+      Serial.print("Failed to find our characteristic UUID: ");
+      Serial.println(charUUID.toString().c_str());
+      return false;
+    }
+    Serial.println(" - Found our characteristic");
+
+    // Read the value of the characteristic.
+    if(pRemoteCharacteristic->canRead()) {
+      std::string value = pRemoteCharacteristic->readValue();
+      Serial.print("The characteristic value was: ");
+      Serial.println(value.c_str());
+    }
+       
+      value2 = pRemoteCharacteristic->readValue();
+      Serial.print("Received Value: ");
+      Serial.println(value2.c_str());
+       if (value2 == "1"){
+        stat2 = 1;
+      }
+      if (value2 == "0"){
+        stat2 = 0;
+      }
+      
+      if(x==1 || x2==1){
+      pRemoteCharacteristic->writeValue("1");}
+      if(x==0 || x2==0){
+      pRemoteCharacteristic->writeValue("0");}
+      //y=2;
+      pClient->disconnect();
+}
+
+bool connectToServer3() {
+    Serial.print("Forming a connection to ");
+    Serial.println(myDevice->getAddress().toString().c_str());
+    
+    BLEClient*  pClient  = BLEDevice::createClient();
+    Serial.println(" - Created client");
+
+    pClient->setClientCallbacks(new MyClientCallback());
+
+    pClient->connect(myDevice);  
+    Serial.println(" - Connected to server");
+
+    BLERemoteService* pRemoteService = pClient->getService(serviceUUID3);
+    if (pRemoteService == nullptr) {
+      Serial.print("Failed to find our service UUID: ");
+      Serial.println(serviceUUID3.toString().c_str());
+      return false;
+    }
+    Serial.println(" - Found our service");
+
+    pRemoteCharacteristic = pRemoteService->getCharacteristic(charUUID);
+    if (pRemoteCharacteristic == nullptr) {
+      Serial.print("Failed to find our characteristic UUID: ");
+      Serial.println(charUUID.toString().c_str());
+      pClient->disconnect();
+      return false;
+    }
+    Serial.println(" - Found our characteristic");
+
+    // Read the value of the characteristic.
+    if(pRemoteCharacteristic->canRead()) {
+      std::string value = pRemoteCharacteristic->readValue();
+      Serial.print("The characteristic value was: ");
+      Serial.println(value.c_str());
+    }
+       
+     value3 = pRemoteCharacteristic->readValue();
+      Serial.print("Received Value: ");
+      Serial.println(value3.c_str());
+       if (value3 == "1"){
+        stat3 = 1;
+      }
+      if (value3 == "0"){
+        stat3 = 0;
+      }
+      
+      if(x==1 || x3==1){
+      pRemoteCharacteristic->writeValue("1");}
+      if(x==0 || x3==0){
+      pRemoteCharacteristic->writeValue("0");}
+      //y=3;
+      pClient->disconnect();
+}
+
+bool connectToServer4() {
+    Serial.print("Forming a connection to ");
+    Serial.println(myDevice->getAddress().toString().c_str());
+    
+    BLEClient*  pClient  = BLEDevice::createClient();
+    Serial.println(" - Created client");
+
+    pClient->setClientCallbacks(new MyClientCallback());
+
+    pClient->connect(myDevice);  
+    Serial.println(" - Connected to server");
+
+    BLERemoteService* pRemoteService = pClient->getService(serviceUUID4);
+    if (pRemoteService == nullptr) {
+      Serial.print("Failed to find our service UUID: ");
+      Serial.println(serviceUUID4.toString().c_str());
+      return false;
+    }
+    Serial.println(" - Found our service");
+
+    pRemoteCharacteristic = pRemoteService->getCharacteristic(charUUID);
+    if (pRemoteCharacteristic == nullptr) {
+      Serial.print("Failed to find our characteristic UUID: ");
+      Serial.println(charUUID.toString().c_str());
+      return false;
+    }
+    Serial.println(" - Found our characteristic");
+
+    // Read the value of the characteristic.
+    if(pRemoteCharacteristic->canRead()) {
+      std::string value = pRemoteCharacteristic->readValue();
+      Serial.print("The characteristic value was: ");
+      Serial.println(value.c_str());
+    }
+       
+      value4 = pRemoteCharacteristic->readValue();
+      Serial.print("Received Value: ");
+      Serial.println(value4.c_str());
+       if (value4 == "1"){
+        stat4 = 1;
+      }
+      if (value1 == "0"){
+        stat4 = 0;
+      }
+      
+      if(x==1 || x4==1){
+      pRemoteCharacteristic->writeValue("1");}
+      if(x==0 || x4==0){
+      pRemoteCharacteristic->writeValue("0");}
+      //y=0;
+      pClient->disconnect();
+}
+class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
+
+  void onResult(BLEAdvertisedDevice advertisedDevice) {
+    Serial.print("BLE Advertised Device found: ");
+    Serial.println(advertisedDevice.toString().c_str());
+
+
+    if (z == 0 && advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID1)) {
+
+      BLEDevice::getScan()->stop();
+      myDevice = new BLEAdvertisedDevice(advertisedDevice);
+      doScan = true;
+      z=1;
+
+    } 
+    
+   if (z == 1 && advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID2)) {
+
+      BLEDevice::getScan()->stop();
+      myDevice = new BLEAdvertisedDevice(advertisedDevice);
+      doScan = true;
+      z=2;
+
+    }
+
+   if (z == 2 && advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID3)) {
+
+      BLEDevice::getScan()->stop();
+      myDevice = new BLEAdvertisedDevice(advertisedDevice);
+      doScan = true;
+      z=3;
+
+    }
+
+   if (z == 3 && advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID4)) {
+
+      BLEDevice::getScan()->stop();
+      myDevice = new BLEAdvertisedDevice(advertisedDevice);
+      doScan = true;
+      z=0;
+
+    }
+  } 
+}; 
+
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println("Starting BLE ...");
+  BLEDevice::init("");
+  wificonnect();
+  BLEScan* pBLEScan = BLEDevice::getScan();
+  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  pBLEScan->setInterval(1349);
+  pBLEScan->setWindow(449);
+  pBLEScan->setActiveScan(true);
+  pBLEScan->start(10, false);
+}
+void loop() {  
+  telegram();    
+ if (x==0 || x==1 || x==2 || x1==0 || x1==1 || x2==0 || x2==1 || x3==0 || x3==1 || x4==0 || x4==1 ) {
+    if(y==0){
+   connectToServer1();
+   delay(2000);
+   BLEDevice::getScan()->start(0); 
+   a=1;
+   y=1;
+   }
+   
+    if(y==1){
+   connectToServer2();
+   delay(2000);
+   BLEDevice::getScan()->start(0); 
+   b=1;
+   y=2;
+   }
+
+   if(y==2){
+   connectToServer3();
+   delay(2000);
+   BLEDevice::getScan()->start(0); 
+   c=1;
+   y=3;
+   }
+
+   if(y==3){
+   connectToServer4();
+   delay(2000);
+   d=1;
+   y=4;
+   r=1;
+   //ESP.restart();
+   }
+
+   /*if(a==1 && b==1 && c==1 && d==1){
+  a=0;
+  b=0;
+  c=0;
+  d=0;
+ }*/
+ }
+}
